@@ -1,32 +1,50 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ListChecks, Plus } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/lib/db'
+import { db, type Lista } from '@/lib/db'
 import { Header } from '@/components/Header'
 import { Card } from '@/components/Card'
 import { EmptyState } from '@/components/EmptyState'
-import { BottomSheet } from '@/components/BottomSheet'
+import { NomeFormSheet } from '@/components/NomeFormSheet'
+import { ConfirmSheet } from '@/components/ConfirmSheet'
+import { SwipeableRow } from '@/components/SwipeableRow'
 import { IconButton } from '@/components/IconButton'
 
 export function ListasPage() {
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [nome, setNome] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editingLista, setEditingLista] = useState<Lista | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deletingLista, setDeletingLista] = useState<Lista | null>(null)
 
   const listas = useLiveQuery(() => db.listas.orderBy('criadaEm').toArray(), [])
 
-  function fecharSheet(open: boolean) {
-    setSheetOpen(open)
-    if (!open) setNome('')
+  async function criarLista(nome: string) {
+    await db.listas.add({ nome, criadaEm: new Date() })
   }
 
-  async function criarLista(event: FormEvent) {
-    event.preventDefault()
-    const nomeLimpo = nome.trim()
-    if (!nomeLimpo) return
+  function abrirEdicao(lista: Lista) {
+    setEditingLista(lista)
+    setEditOpen(true)
+  }
 
-    await db.listas.add({ nome: nomeLimpo, criadaEm: new Date() })
-    fecharSheet(false)
+  async function salvarEdicao(nome: string) {
+    if (!editingLista) return
+    await db.listas.update(editingLista.id, { nome })
+  }
+
+  function abrirExclusao(lista: Lista) {
+    setDeletingLista(lista)
+    setDeleteOpen(true)
+  }
+
+  async function confirmarExclusao() {
+    if (!deletingLista) return
+    await db.transaction('rw', db.listas, db.produtos, async () => {
+      await db.produtos.where('listId').equals(deletingLista.id).delete()
+      await db.listas.delete(deletingLista.id)
+    })
   }
 
   return (
@@ -34,7 +52,7 @@ export function ListasPage() {
       <Header
         title="Minhas listas"
         action={
-          <IconButton aria-label="Nova lista" onClick={() => setSheetOpen(true)}>
+          <IconButton aria-label="Nova lista" onClick={() => setCreateOpen(true)}>
             <Plus className="size-5" />
           </IconButton>
         }
@@ -52,36 +70,44 @@ export function ListasPage() {
         <ul className="flex flex-col gap-3 p-4">
           {listas.map((lista) => (
             <li key={lista.id}>
-              <Card as={Link} to={`/listas/${lista.id}`}>
-                {lista.nome}
-              </Card>
+              <SwipeableRow onEdit={() => abrirEdicao(lista)} onDelete={() => abrirExclusao(lista)}>
+                <Card as={Link} to={`/listas/${lista.id}`}>
+                  {lista.nome}
+                </Card>
+              </SwipeableRow>
             </li>
           ))}
         </ul>
       )}
 
-      <BottomSheet open={sheetOpen} onOpenChange={fecharSheet} title="Nova lista">
-        <form className="flex flex-col gap-4" onSubmit={criarLista}>
-          <label className="sr-only" htmlFor="nome-lista">
-            Nome da lista
-          </label>
-          <input
-            id="nome-lista"
-            type="text"
-            autoFocus
-            value={nome}
-            onChange={(event) => setNome(event.target.value)}
-            placeholder="Nome da lista"
-            className="w-full rounded-app border border-neutral-200 bg-white px-4 py-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-neutral-800 dark:bg-neutral-900"
-          />
-          <button
-            type="submit"
-            className="rounded-app bg-accent px-4 py-3 text-center font-medium text-accent-foreground transition active:scale-[0.99]"
-          >
-            Criar lista
-          </button>
-        </form>
-      </BottomSheet>
+      <NomeFormSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Nova lista"
+        label="Nome da lista"
+        submitLabel="Criar lista"
+        onSubmit={criarLista}
+      />
+
+      <NomeFormSheet
+        key={editingLista?.id ?? 'edit-none'}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        title="Editar lista"
+        label="Nome da lista"
+        submitLabel="Salvar"
+        initialValue={editingLista?.nome}
+        onSubmit={salvarEdicao}
+      />
+
+      <ConfirmSheet
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Excluir lista"
+        description={`Excluir "${deletingLista?.nome}"? Essa ação não pode ser desfeita.`}
+        confirmLabel="Excluir"
+        onConfirm={confirmarExclusao}
+      />
     </div>
   )
 }

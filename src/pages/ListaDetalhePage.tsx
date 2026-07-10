@@ -1,19 +1,21 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Plus, ShoppingBasket } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/lib/db'
+import { db, type Produto } from '@/lib/db'
 import { Header } from '@/components/Header'
 import { Card } from '@/components/Card'
 import { EmptyState } from '@/components/EmptyState'
-import { BottomSheet } from '@/components/BottomSheet'
+import { NomeFormSheet } from '@/components/NomeFormSheet'
+import { SwipeableRow } from '@/components/SwipeableRow'
 import { IconButton } from '@/components/IconButton'
 
 export function ListaDetalhePage() {
   const { id } = useParams<{ id: string }>()
   const listId = Number(id)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [nome, setNome] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editingProduto, setEditingProduto] = useState<Produto | null>(null)
 
   const lista = useLiveQuery(() => db.listas.get(listId), [listId])
   const produtos = useLiveQuery(
@@ -24,22 +26,26 @@ export function ListaDetalhePage() {
   const pendentes = produtos?.filter((produto) => !produto.comprado) ?? []
   const comprados = produtos?.filter((produto) => produto.comprado) ?? []
 
-  function fecharSheet(open: boolean) {
-    setSheetOpen(open)
-    if (!open) setNome('')
-  }
-
-  async function adicionarProduto(event: FormEvent) {
-    event.preventDefault()
-    const nomeLimpo = nome.trim()
-    if (!nomeLimpo) return
-
-    await db.produtos.add({ listId, nome: nomeLimpo, comprado: false, criadoEm: new Date() })
-    fecharSheet(false)
+  async function adicionarProduto(nome: string) {
+    await db.produtos.add({ listId, nome, comprado: false, criadoEm: new Date() })
   }
 
   async function alternarComprado(produtoId: number, comprado: boolean) {
     await db.produtos.update(produtoId, { comprado: !comprado })
+  }
+
+  function abrirEdicao(produto: Produto) {
+    setEditingProduto(produto)
+    setEditOpen(true)
+  }
+
+  async function salvarEdicao(nome: string) {
+    if (!editingProduto) return
+    await db.produtos.update(editingProduto.id, { nome })
+  }
+
+  async function excluirProduto(produtoId: number) {
+    await db.produtos.delete(produtoId)
   }
 
   return (
@@ -56,7 +62,7 @@ export function ListaDetalhePage() {
           </Link>
         }
         action={
-          <IconButton aria-label="Adicionar produto" onClick={() => setSheetOpen(true)}>
+          <IconButton aria-label="Adicionar produto" onClick={() => setCreateOpen(true)}>
             <Plus className="size-5" />
           </IconButton>
         }
@@ -75,13 +81,18 @@ export function ListaDetalhePage() {
           <ul className="flex flex-col gap-3">
             {pendentes.map((produto) => (
               <li key={produto.id}>
-                <Card
-                  as="button"
-                  type="button"
-                  onClick={() => alternarComprado(produto.id, produto.comprado)}
+                <SwipeableRow
+                  onEdit={() => abrirEdicao(produto)}
+                  onDelete={() => excluirProduto(produto.id)}
                 >
-                  {produto.nome}
-                </Card>
+                  <Card
+                    as="button"
+                    type="button"
+                    onClick={() => alternarComprado(produto.id, produto.comprado)}
+                  >
+                    {produto.nome}
+                  </Card>
+                </SwipeableRow>
               </li>
             ))}
           </ul>
@@ -94,14 +105,19 @@ export function ListaDetalhePage() {
               <ul className="flex flex-col gap-3">
                 {comprados.map((produto) => (
                   <li key={produto.id}>
-                    <Card
-                      as="button"
-                      type="button"
-                      onClick={() => alternarComprado(produto.id, produto.comprado)}
-                      className="text-neutral-400 line-through dark:text-neutral-500"
+                    <SwipeableRow
+                      onEdit={() => abrirEdicao(produto)}
+                      onDelete={() => excluirProduto(produto.id)}
                     >
-                      {produto.nome}
-                    </Card>
+                      <Card
+                        as="button"
+                        type="button"
+                        onClick={() => alternarComprado(produto.id, produto.comprado)}
+                        className="text-neutral-400 line-through dark:text-neutral-500"
+                      >
+                        {produto.nome}
+                      </Card>
+                    </SwipeableRow>
                   </li>
                 ))}
               </ul>
@@ -110,28 +126,25 @@ export function ListaDetalhePage() {
         </div>
       )}
 
-      <BottomSheet open={sheetOpen} onOpenChange={fecharSheet} title="Adicionar produto">
-        <form className="flex flex-col gap-4" onSubmit={adicionarProduto}>
-          <label className="sr-only" htmlFor="nome-produto">
-            Nome do produto
-          </label>
-          <input
-            id="nome-produto"
-            type="text"
-            autoFocus
-            value={nome}
-            onChange={(event) => setNome(event.target.value)}
-            placeholder="Nome do produto"
-            className="w-full rounded-app border border-neutral-200 bg-white px-4 py-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-neutral-800 dark:bg-neutral-900"
-          />
-          <button
-            type="submit"
-            className="rounded-app bg-accent px-4 py-3 text-center font-medium text-accent-foreground transition active:scale-[0.99]"
-          >
-            Adicionar produto
-          </button>
-        </form>
-      </BottomSheet>
+      <NomeFormSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Adicionar produto"
+        label="Nome do produto"
+        submitLabel="Adicionar produto"
+        onSubmit={adicionarProduto}
+      />
+
+      <NomeFormSheet
+        key={editingProduto?.id ?? 'edit-none'}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        title="Editar produto"
+        label="Nome do produto"
+        submitLabel="Salvar"
+        initialValue={editingProduto?.nome}
+        onSubmit={salvarEdicao}
+      />
     </div>
   )
 }
