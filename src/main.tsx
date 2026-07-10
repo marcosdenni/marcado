@@ -5,11 +5,15 @@ import { registerSW } from 'virtual:pwa-register'
 import { router } from './router'
 import './index.css'
 
-registerSW({
+const updateSW = registerSW({
   immediate: true,
+  onNeedRefresh() {
+    updateSW(true)
+  },
   onRegisteredSW(_url, registration) {
     if (!registration) return
 
+    registration.update()
     setInterval(() => registration.update(), 60 * 60 * 1000)
 
     document.addEventListener('visibilitychange', () => {
