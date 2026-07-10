@@ -10,6 +10,7 @@ import { Card } from '@/components/Card'
 import { EmptyState } from '@/components/EmptyState'
 import { NomeFormSheet } from '@/components/NomeFormSheet'
 import { AdicionarProdutosSheet } from '@/components/AdicionarProdutosSheet'
+import { VoiceAddOverlay } from '@/components/VoiceAddOverlay'
 import { SwipeableRow } from '@/components/SwipeableRow'
 import { IconButton } from '@/components/IconButton'
 import { RiscarTexto } from '@/components/RiscarTexto'
@@ -20,6 +21,7 @@ export function ListaDetalhePage() {
   const { id } = useParams<{ id: string }>()
   const listId = Number(id)
   const [createOpen, setCreateOpen] = useState(false)
+  const [vozOverlayOpen, setVozOverlayOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [editingProduto, setEditingProduto] = useState<Produto | null>(null)
 
@@ -161,7 +163,15 @@ export function ListaDetalhePage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onSubmit={adicionarProdutos}
+        onIniciarVoz={() => {
+          setCreateOpen(false)
+          setVozOverlayOpen(true)
+        }}
       />
+
+      {vozOverlayOpen && (
+        <VoiceAddOverlay listId={listId} onClose={() => setVozOverlayOpen(false)} />
+      )}
 
       <NomeFormSheet
         key={editingProduto?.id ?? 'edit-none'}

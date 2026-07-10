@@ -1,33 +1,10 @@
 import { useRef, useState } from 'react'
+import { getSpeechRecognitionCtor, marcarVozIndisponivel, vozPodeFuncionar } from '@/lib/voz'
 
-const STORAGE_KEY = 'lista-mercado:voz-indisponivel'
 const TIMEOUT_FUNCIONAL_MS = 4000
 
-function vozMarcadaComoIndisponivel() {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-function marcarVozIndisponivel() {
-  try {
-    localStorage.setItem(STORAGE_KEY, '1')
-  } catch {
-    // localStorage pode estar indisponível (modo privado); ignora
-  }
-}
-
-function getSpeechRecognitionCtor(): (new () => SpeechRecognition) | null {
-  if (typeof window === 'undefined') return null
-  return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null
-}
-
 export function useSpeechToText(onResultado: (texto: string) => void) {
-  const [suportado, setSuportado] = useState(
-    () => getSpeechRecognitionCtor() !== null && !vozMarcadaComoIndisponivel(),
-  )
+  const [suportado, setSuportado] = useState(vozPodeFuncionar)
   const [ouvindo, setOuvindo] = useState(false)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
 

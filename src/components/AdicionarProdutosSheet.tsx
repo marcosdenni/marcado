@@ -1,28 +1,23 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Mic, MicOff } from 'lucide-react'
+import { Mic } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { BottomSheet } from '@/components/BottomSheet'
 import { SugestoesChips } from '@/components/SugestoesChips'
 import { buscarSugestoes } from '@/lib/catalogo'
-import { useSpeechToText } from '@/hooks/useSpeechToText'
+import { vozPodeFuncionar } from '@/lib/voz'
 
 interface AdicionarProdutosSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (nomes: string[]) => void | Promise<void>
-}
-
-function transcricaoParaLinhas(texto: string): string[] {
-  return texto
-    .split(/,|\be\b/gi)
-    .map((parte) => parte.trim())
-    .filter(Boolean)
+  onIniciarVoz: () => void
 }
 
 export function AdicionarProdutosSheet({
   open,
   onOpenChange,
   onSubmit,
+  onIniciarVoz,
 }: AdicionarProdutosSheetProps) {
   const [texto, setTexto] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -43,29 +38,9 @@ export function AdicionarProdutosSheet({
     }
   }, [texto])
 
-  function inserirTranscricao(textoReconhecido: string) {
-    const linhas = transcricaoParaLinhas(textoReconhecido)
-    if (linhas.length === 0) return
-
-    setTexto((atual) => {
-      const prefixo = atual.length > 0 && !atual.endsWith('\n') ? `${atual}\n` : atual
-      return `${prefixo}${linhas.join('\n')}\n`
-    })
-  }
-
-  const {
-    suportado: vozSuportada,
-    ouvindo,
-    iniciar: iniciarEscuta,
-    parar: pararEscuta,
-  } = useSpeechToText(inserirTranscricao)
-
   function handleOpenChange(nextOpen: boolean) {
     onOpenChange(nextOpen)
-    if (!nextOpen) {
-      setTexto('')
-      pararEscuta()
-    }
+    if (!nextOpen) setTexto('')
   }
 
   function selecionarSugestao(nomeEscolhido: string) {
@@ -110,18 +85,14 @@ export function AdicionarProdutosSheet({
             className="max-h-60 w-full flex-1 resize-none overflow-y-auto rounded-app border border-neutral-200 bg-white px-4 py-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-neutral-800 dark:bg-neutral-900"
           />
 
-          {vozSuportada && (
+          {vozPodeFuncionar() && (
             <button
               type="button"
-              onClick={ouvindo ? pararEscuta : iniciarEscuta}
-              aria-label={ouvindo ? 'Parar de ouvir' : 'Adicionar por voz'}
-              className={`flex size-12 shrink-0 items-center justify-center rounded-full transition active:scale-95 ${
-                ouvindo
-                  ? 'animate-pulse bg-danger text-white'
-                  : 'bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200'
-              }`}
+              onClick={onIniciarVoz}
+              aria-label="Adicionar por voz"
+              className="flex size-12 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-neutral-700 transition active:scale-95 dark:bg-neutral-800 dark:text-neutral-200"
             >
-              {ouvindo ? <MicOff className="size-5" /> : <Mic className="size-5" />}
+              <Mic className="size-5" />
             </button>
           )}
         </div>
