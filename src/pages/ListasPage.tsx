@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ListChecks, Plus } from 'lucide-react'
+import { EllipsisVertical, ListChecks, Plus } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AnimatePresence, motion } from 'motion/react'
 import { db, type Lista } from '@/lib/db'
@@ -11,6 +11,7 @@ import { NomeFormSheet } from '@/components/NomeFormSheet'
 import { ConfirmSheet } from '@/components/ConfirmSheet'
 import { SwipeableRow } from '@/components/SwipeableRow'
 import { IconButton } from '@/components/IconButton'
+import { BackupSheet } from '@/components/BackupSheet'
 
 export function ListasPage() {
   const [createOpen, setCreateOpen] = useState(false)
@@ -18,6 +19,7 @@ export function ListasPage() {
   const [editingLista, setEditingLista] = useState<Lista | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletingLista, setDeletingLista] = useState<Lista | null>(null)
+  const [backupOpen, setBackupOpen] = useState(false)
 
   const listas = useLiveQuery(() => db.listas.orderBy('criadaEm').toArray(), [])
 
@@ -53,9 +55,19 @@ export function ListasPage() {
       <Header
         title="Minhas listas"
         action={
-          <IconButton aria-label="Nova lista" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-5" />
-          </IconButton>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setBackupOpen(true)}
+              aria-label="Mais opções"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full text-neutral-600 dark:text-neutral-300"
+            >
+              <EllipsisVertical className="size-5" />
+            </button>
+            <IconButton aria-label="Nova lista" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-5" />
+            </IconButton>
+          </div>
         }
       />
 
@@ -121,6 +133,8 @@ export function ListasPage() {
         confirmLabel="Excluir"
         onConfirm={confirmarExclusao}
       />
+
+      <BackupSheet open={backupOpen} onOpenChange={setBackupOpen} />
     </div>
   )
 }
