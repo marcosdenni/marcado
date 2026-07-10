@@ -11,10 +11,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Lista de Mercado',
-        short_name: 'Mercado',
+        name: 'Marcado',
+        short_name: 'Marcado',
         description: 'Listas de compras simples, rápidas e offline.',
         theme_color: '#16a34a',
         background_color: '#ffffff',
@@ -25,6 +25,16 @@ export default defineConfig({
             src: 'favicon.svg',
             sizes: 'any',
             type: 'image/svg+xml',
+          },
+          {
+            src: 'icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
           },
         ],
       },

@@ -1,6 +1,6 @@
-Lista de Mercado
+Marcado
 
-Projeto desenvolvido em React para estudos.
+Lista de compras, simples e offline. Projeto desenvolvido em React para estudos.
 
 PWA.
 
