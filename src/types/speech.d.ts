@@ -10,6 +10,7 @@ interface SpeechRecognitionResultList {
 
 interface SpeechRecognitionEvent extends Event {
   readonly results: SpeechRecognitionResultList
+  readonly resultIndex: number
 }
 
 interface SpeechRecognitionErrorEvent extends Event {

@@ -43,11 +43,6 @@ export function AdicionarProdutosSheet({
     }
   }, [texto])
 
-  function handleOpenChange(nextOpen: boolean) {
-    onOpenChange(nextOpen)
-    if (!nextOpen) setTexto('')
-  }
-
   function inserirTranscricao(textoReconhecido: string) {
     const linhas = transcricaoParaLinhas(textoReconhecido)
     if (linhas.length === 0) return
@@ -62,7 +57,16 @@ export function AdicionarProdutosSheet({
     suportado: vozSuportada,
     ouvindo,
     iniciar: iniciarEscuta,
+    parar: pararEscuta,
   } = useSpeechToText(inserirTranscricao)
+
+  function handleOpenChange(nextOpen: boolean) {
+    onOpenChange(nextOpen)
+    if (!nextOpen) {
+      setTexto('')
+      pararEscuta()
+    }
+  }
 
   function selecionarSugestao(nomeEscolhido: string) {
     const antesDaLinha = texto.slice(0, texto.lastIndexOf('\n') + 1)
@@ -109,8 +113,8 @@ export function AdicionarProdutosSheet({
           {vozSuportada && (
             <button
               type="button"
-              onClick={iniciarEscuta}
-              aria-label={ouvindo ? 'Ouvindo' : 'Adicionar por voz'}
+              onClick={ouvindo ? pararEscuta : iniciarEscuta}
+              aria-label={ouvindo ? 'Parar de ouvir' : 'Adicionar por voz'}
               className={`flex size-12 shrink-0 items-center justify-center rounded-full transition active:scale-95 ${
                 ouvindo
                   ? 'animate-pulse bg-danger text-white'

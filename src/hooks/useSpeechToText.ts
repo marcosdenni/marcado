@@ -41,7 +41,7 @@ export function useSpeechToText(onResultado: (texto: string) => void) {
     const recognition = new Ctor()
     recognitionRef.current = recognition
     recognition.lang = 'pt-BR'
-    recognition.continuous = false
+    recognition.continuous = true
     recognition.interimResults = false
 
     let funcionou = false
@@ -66,11 +66,16 @@ export function useSpeechToText(onResultado: (texto: string) => void) {
     }
 
     recognition.onresult = (event) => {
-      const texto = Array.from(
-        { length: event.results.length },
-        (_, i) => event.results[i][0].transcript,
-      ).join(' ')
-      onResultado(texto)
+      let textoNovo = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const resultado = event.results[i]
+        if (resultado.isFinal) {
+          textoNovo += `${resultado[0].transcript} `
+        }
+      }
+      if (textoNovo.trim()) {
+        onResultado(textoNovo.trim())
+      }
     }
 
     recognition.onerror = () => {
