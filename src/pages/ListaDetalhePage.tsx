@@ -2,13 +2,19 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Plus, ShoppingBasket } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { AnimatePresence, motion } from 'motion/react'
 import { db, type Produto } from '@/lib/db'
+import { registrarUsoCatalogo } from '@/lib/catalogo'
 import { Header } from '@/components/Header'
 import { Card } from '@/components/Card'
 import { EmptyState } from '@/components/EmptyState'
 import { NomeFormSheet } from '@/components/NomeFormSheet'
+import { AdicionarProdutosSheet } from '@/components/AdicionarProdutosSheet'
 import { SwipeableRow } from '@/components/SwipeableRow'
 import { IconButton } from '@/components/IconButton'
+import { RiscarTexto } from '@/components/RiscarTexto'
+
+const ITEM_TRANSITION = { duration: 0.18 }
 
 export function ListaDetalhePage() {
   const { id } = useParams<{ id: string }>()
@@ -26,12 +32,19 @@ export function ListaDetalhePage() {
   const pendentes = produtos?.filter((produto) => !produto.comprado) ?? []
   const comprados = produtos?.filter((produto) => produto.comprado) ?? []
 
-  async function adicionarProduto(nome: string) {
-    await db.produtos.add({ listId, nome, comprado: false, criadoEm: new Date() })
+  async function adicionarProdutos(nomes: string[]) {
+    const agora = new Date()
+    await db.transaction('rw', db.produtos, db.catalogo, async () => {
+      for (const nome of nomes) {
+        await db.produtos.add({ listId, nome, comprado: false, criadoEm: agora })
+        await registrarUsoCatalogo(nome)
+      }
+    })
   }
 
   async function alternarComprado(produtoId: number, comprado: boolean) {
     await db.produtos.update(produtoId, { comprado: !comprado })
+    navigator.vibrate?.(10)
   }
 
   function abrirEdicao(produto: Produto) {
@@ -79,22 +92,31 @@ export function ListaDetalhePage() {
       {produtos && produtos.length > 0 && (
         <div className="flex flex-col gap-6 p-4">
           <ul className="flex flex-col gap-3">
-            {pendentes.map((produto) => (
-              <li key={produto.id}>
-                <SwipeableRow
-                  onEdit={() => abrirEdicao(produto)}
-                  onDelete={() => excluirProduto(produto.id)}
+            <AnimatePresence initial={false}>
+              {pendentes.map((produto, index) => (
+                <motion.li
+                  key={produto.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -80 }}
+                  transition={{ ...ITEM_TRANSITION, delay: index * 0.04 }}
                 >
-                  <Card
-                    as="button"
-                    type="button"
-                    onClick={() => alternarComprado(produto.id, produto.comprado)}
+                  <SwipeableRow
+                    onEdit={() => abrirEdicao(produto)}
+                    onDelete={() => excluirProduto(produto.id)}
                   >
-                    {produto.nome}
-                  </Card>
-                </SwipeableRow>
-              </li>
-            ))}
+                    <Card
+                      as="button"
+                      type="button"
+                      onClick={() => alternarComprado(produto.id, produto.comprado)}
+                    >
+                      {produto.nome}
+                    </Card>
+                  </SwipeableRow>
+                </motion.li>
+              ))}
+            </AnimatePresence>
           </ul>
 
           {comprados.length > 0 && (
@@ -103,36 +125,42 @@ export function ListaDetalhePage() {
                 Comprados
               </p>
               <ul className="flex flex-col gap-3">
-                {comprados.map((produto) => (
-                  <li key={produto.id}>
-                    <SwipeableRow
-                      onEdit={() => abrirEdicao(produto)}
-                      onDelete={() => excluirProduto(produto.id)}
+                <AnimatePresence initial={false}>
+                  {comprados.map((produto) => (
+                    <motion.li
+                      key={produto.id}
+                      layout
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -80 }}
+                      transition={ITEM_TRANSITION}
                     >
-                      <Card
-                        as="button"
-                        type="button"
-                        onClick={() => alternarComprado(produto.id, produto.comprado)}
-                        className="text-neutral-400 line-through dark:text-neutral-500"
+                      <SwipeableRow
+                        onEdit={() => abrirEdicao(produto)}
+                        onDelete={() => excluirProduto(produto.id)}
                       >
-                        {produto.nome}
-                      </Card>
-                    </SwipeableRow>
-                  </li>
-                ))}
+                        <Card
+                          as="button"
+                          type="button"
+                          onClick={() => alternarComprado(produto.id, produto.comprado)}
+                          className="text-neutral-400 dark:text-neutral-500"
+                        >
+                          <RiscarTexto ativo>{produto.nome}</RiscarTexto>
+                        </Card>
+                      </SwipeableRow>
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
               </ul>
             </div>
           )}
         </div>
       )}
 
-      <NomeFormSheet
+      <AdicionarProdutosSheet
         open={createOpen}
         onOpenChange={setCreateOpen}
-        title="Adicionar produto"
-        label="Nome do produto"
-        submitLabel="Adicionar produto"
-        onSubmit={adicionarProduto}
+        onSubmit={adicionarProdutos}
       />
 
       <NomeFormSheet

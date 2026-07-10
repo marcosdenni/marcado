@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ListChecks, Plus } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { AnimatePresence, motion } from 'motion/react'
 import { db, type Lista } from '@/lib/db'
 import { Header } from '@/components/Header'
 import { Card } from '@/components/Card'
@@ -68,15 +69,27 @@ export function ListasPage() {
 
       {listas && listas.length > 0 && (
         <ul className="flex flex-col gap-3 p-4">
-          {listas.map((lista) => (
-            <li key={lista.id}>
-              <SwipeableRow onEdit={() => abrirEdicao(lista)} onDelete={() => abrirExclusao(lista)}>
-                <Card as={Link} to={`/listas/${lista.id}`}>
-                  {lista.nome}
-                </Card>
-              </SwipeableRow>
-            </li>
-          ))}
+          <AnimatePresence initial={false}>
+            {listas.map((lista, index) => (
+              <motion.li
+                key={lista.id}
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -80 }}
+                transition={{ duration: 0.18, delay: index * 0.04 }}
+              >
+                <SwipeableRow
+                  onEdit={() => abrirEdicao(lista)}
+                  onDelete={() => abrirExclusao(lista)}
+                >
+                  <Card as={Link} to={`/listas/${lista.id}`}>
+                    {lista.nome}
+                  </Card>
+                </SwipeableRow>
+              </motion.li>
+            ))}
+          </AnimatePresence>
         </ul>
       )}
 
